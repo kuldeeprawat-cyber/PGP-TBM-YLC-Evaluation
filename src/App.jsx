@@ -6,7 +6,7 @@ import {
   Menu, ChevronDown, ChevronUp, AlertTriangle, Sparkles, RefreshCw, Upload,
   Clock, GraduationCap, Briefcase, Building2, Trophy, FileQuestion, History,
   CircleCheck, CircleDot, Globe, Mail, Phone, Bookmark, Zap, Hand, Calendar,
-  TrendingUp, Layers
+  TrendingUp, Layers, LogOut
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -46,9 +46,13 @@ const GlobalStyle = () => (
       background: #fff;
       border: 1px solid #E5E5E5;
       border-radius: 14px;
-      transition: box-shadow .18s ease, border-color .18s ease, transform .18s ease;
+      transition: box-shadow .2s ease, border-color .2s ease, transform .2s ease;
     }
-    .mu-card:hover { box-shadow: 0 6px 24px rgba(0,0,0,0.06); }
+    .mu-card:hover { box-shadow: 0 10px 28px rgba(20,20,20,0.07); border-color: #DCDCDC; }
+    .mu-card.mu-card-clickable { cursor: pointer; }
+    .mu-card.mu-card-clickable:hover { transform: translateY(-2px); }
+
+    .mu-root { background: linear-gradient(180deg, #FAFAFA 0%, #F7F7F6 100%); }
 
     .mu-badge {
       display: inline-flex; align-items: center; gap: 4px;
@@ -60,12 +64,12 @@ const GlobalStyle = () => (
       display: inline-flex; align-items: center; justify-content: center; gap: 6px;
       border-radius: 10px; border: 1px solid transparent;
       font-weight: 600; font-size: 13.5px;
-      transition: all .15s ease; white-space: nowrap;
+      transition: all .16s cubic-bezier(.2,.8,.3,1); white-space: nowrap;
     }
-    .mu-btn-primary { background: #171717; color: #fff; padding: 9px 16px; }
-    .mu-btn-primary:hover { background: #000; transform: translateY(-1px); }
+    .mu-btn-primary { background: #171717; color: #fff; padding: 9px 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.14); }
+    .mu-btn-primary:hover:not(:disabled) { background: #000; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(0,0,0,0.2); }
     .mu-btn-secondary { background: #fff; color: #171717; border-color: #E5E5E5; padding: 9px 16px; }
-    .mu-btn-secondary:hover { border-color: #A3A3A3; background: #FAFAFA; }
+    .mu-btn-secondary:hover:not(:disabled) { border-color: #A3A3A3; background: #FAFAFA; transform: translateY(-1px); }
     .mu-btn-ghost { background: transparent; color: #525252; padding: 8px 12px; }
     .mu-btn-ghost:hover { background: #F0F0F0; }
     .mu-btn:disabled { opacity: .4; cursor: not-allowed; transform: none !important; }
@@ -105,6 +109,9 @@ const GlobalStyle = () => (
     .mu-tab.active { color:#171717; border-color:#171717; }
 
     .mu-swipe-card { touch-action: none; user-select:none; }
+    .mu-access-card { transition: all .18s ease; }
+    .mu-access-card:hover:not(:disabled) { border-color: #39B6D8 !important; transform: translateY(-1px); box-shadow: 0 8px 20px rgba(57,182,216,0.15); }
+    .mu-access-card:active:not(:disabled) { transform: translateY(0) scale(0.99); }
 
     /* ---- Quick Evaluate (redesigned) ---- */
     .mu-qe-wrap { max-width: 460px; margin: 0 auto; display: flex; flex-direction: column; }
@@ -242,6 +249,7 @@ function AccessScreen({ onAuthenticated }) {
   const [name, setName] = useState("");
   const [denied, setDenied] = useState(false);
   const [checking, setChecking] = useState(false);
+  const [pickedId, setPickedId] = useState(null);
 
   const submit = () => {
     const match = matchUser(name);
@@ -252,6 +260,19 @@ function AccessScreen({ onAuthenticated }) {
     } else {
       setDenied(true);
     }
+  };
+
+  const pick = (user) => {
+    setDenied(false);
+    setPickedId(user.role);
+    setChecking(true);
+    setTimeout(() => onAuthenticated(user), 400);
+  };
+
+  const PROFILE_META = {
+    admin: { label: "Admin", desc: "Full oversight" },
+    shivas: { label: "Stage 1", desc: "Pre-interview evaluation" },
+    pratham: { label: "Stage 2", desc: "Post-interview evaluation" },
   };
 
   return (
@@ -268,7 +289,7 @@ function AccessScreen({ onAuthenticated }) {
           </linearGradient>
         </defs>
       </svg>
-      <div style={{ width: "100%", maxWidth: 420, position: "relative", zIndex: 1 }}>
+      <div style={{ width: "100%", maxWidth: 440, position: "relative", zIndex: 1 }}>
         <div style={{ display: "flex", justifyContent: "center", marginBottom: 34 }}>
           <MULogo variant="white" height={30} />
         </div>
@@ -279,12 +300,50 @@ function AccessScreen({ onAuthenticated }) {
           <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".12em", textTransform: "uppercase", color: "#39B6D8", marginBottom: 8, textAlign: "center" }}>
             C8 Profile Evaluation Access
           </div>
-          <h1 style={{ color: "#fff", fontSize: 22, fontWeight: 800, textAlign: "center", margin: "0 0 6px" }}>Who are you?</h1>
-          <p style={{ color: "#A3A3A3", fontSize: 13, textAlign: "center", margin: "0 0 26px", lineHeight: 1.5 }}>
-            This admissions evaluation dashboard is restricted to authorised evaluators.
+          <h1 style={{ color: "#fff", fontSize: 23, fontWeight: 800, textAlign: "center", margin: "0 0 6px", letterSpacing: "-0.01em" }}>Who's judging the future stars?</h1>
+          <p style={{ color: "#A3A3A3", fontSize: 13, textAlign: "center", margin: "0 0 22px", lineHeight: 1.5 }}>
+            Pick your profile, or enter your name below.
           </p>
+
+          <div style={{ display: "grid", gap: 10, marginBottom: 20 }}>
+            {AUTHORIZED_USERS.map((u) => (
+              <button
+                key={u.role}
+                className="mu-access-card"
+                onClick={() => pick(u)}
+                disabled={checking}
+                style={{
+                  display: "flex", alignItems: "center", gap: 12, textAlign: "left",
+                  background: pickedId === u.role ? "#1E2A30" : "#1A1A1B", border: "1px solid #2A2A2A",
+                  borderRadius: 14, padding: "12px 14px", cursor: "pointer",
+                }}
+              >
+                <span style={{
+                  width: 40, height: 40, borderRadius: "50%", flexShrink: 0,
+                  background: `linear-gradient(135deg, ${BRAND.blue}, ${BRAND.orange})`,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  color: "#fff", fontWeight: 800, fontSize: 14,
+                }}>
+                  {u.full.split(" ").map((p) => p[0]).slice(0, 2).join("")}
+                </span>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: "block", color: "#fff", fontWeight: 700, fontSize: 14.5 }}>{u.full}</span>
+                  <span style={{ display: "block", color: "#737373", fontSize: 11.5, marginTop: 1 }}>{PROFILE_META[u.role]?.desc}</span>
+                </span>
+                <span style={{ fontSize: 10.5, fontWeight: 700, color: "#39B6D8", background: "rgba(57,182,216,0.12)", padding: "3px 9px", borderRadius: 999, flexShrink: 0 }}>
+                  {PROFILE_META[u.role]?.label}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "0 0 18px" }}>
+            <div style={{ flex: 1, height: 1, background: "#262626" }} />
+            <span style={{ fontSize: 10.5, color: "#525252", fontWeight: 700, letterSpacing: ".04em" }}>OR TYPE YOUR NAME</span>
+            <div style={{ flex: 1, height: 1, background: "#262626" }} />
+          </div>
+
           <input
-            autoFocus
             className="mu-input"
             placeholder="Enter your name"
             value={name}
@@ -921,14 +980,19 @@ function Workspace({ identity, onSignOut }) {
   const pendingShivasCount = useMemo(() => shivasQueue.filter((c) => !isSkipped("shivas", c.appNo)).length, [shivasQueue, isSkipped]);
   const pendingPrathamCount = useMemo(() => prathamQueue.filter((c) => !isSkipped("pratham", c.appNo)).length, [prathamQueue, isSkipped]);
 
-  const activeList = useMemo(() => {
-    if (queueSource === "queue") return pendingList;
-    if (queueSource === "completed") return completedList;
-    if (queueSource === "skipped") return skippedList;
+  const activeListFor = (source) => {
+    if (source === "queue") return pendingList;
+    if (source === "completed") return completedList;
+    if (source === "skipped") return skippedList;
     return searchFiltered;
-  }, [queueSource, pendingList, completedList, skippedList, searchFiltered]);
+  };
 
-  const selectedIndex = activeList.findIndex((c) => c.appNo === selectedAppNo);
+  // Navigation uses a frozen snapshot of appNos taken at the moment a profile is opened.
+  // This is deliberate: evaluating a candidate removes them from the live Pending list
+  // immediately, which would otherwise break Next/Previous mid-session. The candidate
+  // DATA shown is always live (via byAppNo) — only the navigation ORDER is frozen.
+  const [navSnapshot, setNavSnapshot] = useState([]);
+  const selectedIndex = navSnapshot.indexOf(selectedAppNo);
   const selected = selectedAppNo ? byAppNo[selectedAppNo] : null;
 
   const openProfile = (appNo, source = "queue") => {
@@ -936,14 +1000,16 @@ function Workspace({ identity, onSignOut }) {
     if (source === "queue") setQueueSubTab("pending");
     else if (source === "completed") setQueueSubTab("completed");
     else if (source === "skipped") setQueueSubTab("skipped");
+    setNavSnapshot(activeListFor(source).map((c) => c.appNo));
     setSelectedAppNo(appNo);
+    setSidebarOpen(false);
     setView("profile");
   };
   const goNext = () => {
-    if (selectedIndex >= 0 && selectedIndex < activeList.length - 1) setSelectedAppNo(activeList[selectedIndex + 1].appNo);
+    if (selectedIndex >= 0 && selectedIndex < navSnapshot.length - 1) setSelectedAppNo(navSnapshot[selectedIndex + 1]);
   };
   const goPrev = () => {
-    if (selectedIndex > 0) setSelectedAppNo(activeList[selectedIndex - 1].appNo);
+    if (selectedIndex > 0) setSelectedAppNo(navSnapshot[selectedIndex - 1]);
   };
 
   /* --------- save evaluation --------- */
@@ -1063,8 +1129,8 @@ function Workspace({ identity, onSignOut }) {
             <CandidateProfile
               candidate={selected} evaluator={activeEvaluator}
               onNext={goNext} onPrev={goPrev}
-              hasNext={selectedIndex < activeList.length - 1} hasPrev={selectedIndex > 0}
-              index={selectedIndex} total={activeList.length}
+              hasNext={selectedIndex >= 0 && selectedIndex < navSnapshot.length - 1} hasPrev={selectedIndex > 0}
+              index={selectedIndex} total={navSnapshot.length}
               onEvaluate={(preselect) => setModalState({ appNo: selected.appNo, evaluatorId: activeEvaluator.id, preselect })}
               history={historyMap[selected.appNo] || []}
               onBack={() => setView(queueSource === "all" ? "all" : "queue")}
@@ -1079,7 +1145,7 @@ function Workspace({ identity, onSignOut }) {
           )}
           {view === "quick" && (
             <QuickEvaluate list={pendingList} evaluator={activeEvaluator}
-              onEvaluate={(appNo, evaluatorId, preselect) => setModalState({ appNo, evaluatorId, preselect })}
+              onSaveEvaluation={saveEvaluation}
               onSkip={(appNo) => toggleSkip(activeEvaluator.id, appNo)}
             />
           )}
@@ -1149,10 +1215,19 @@ function TopBar({ identity, onSignOut, sidebarOpen, setSidebarOpen, onSync, onSt
             </span>
             <ChevronDown size={13} />
           </button>
+          {menuOpen && <div onClick={() => setMenuOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 59 }} />}
           {menuOpen && (
-            <div style={{ position: "absolute", right: 0, top: "calc(100% + 6px)", background: "#fff", border: "1px solid #E5E5E5", borderRadius: 10, boxShadow: "0 10px 30px rgba(0,0,0,0.12)", minWidth: 170, zIndex: 60, overflow: "hidden" }}>
-              <button className="mu-btn mu-btn-ghost mu-hide-desktop" style={{ width: "100%", justifyContent: "flex-start", borderRadius: 0, padding: "10px 14px" }} onClick={() => { setMenuOpen(false); onStartTour(); }}>Show me how this works</button>
-              <button className="mu-btn mu-btn-ghost" style={{ width: "100%", justifyContent: "flex-start", borderRadius: 0, padding: "10px 14px", color: "#C0392B" }} onClick={onSignOut}>Not you? Switch user</button>
+            <div style={{ position: "absolute", right: 0, top: "calc(100% + 6px)", background: "#fff", border: "1px solid #E5E5E5", borderRadius: 10, boxShadow: "0 10px 30px rgba(0,0,0,0.12)", minWidth: 190, zIndex: 60, overflow: "hidden" }}>
+              <div className="mu-hide-desktop" style={{ padding: "10px 14px", borderBottom: "1px solid #F0F0F0" }}>
+                <div style={{ fontSize: 12.5, fontWeight: 700 }}>{identity.full}</div>
+                <div style={{ fontSize: 10.5, color: "#A3A3A3" }}>{ROLE_LABELS[identity.role]}</div>
+              </div>
+              <button className="mu-btn mu-btn-ghost mu-hide-desktop" style={{ width: "100%", justifyContent: "flex-start", borderRadius: 0, padding: "10px 14px" }} onClick={() => { setMenuOpen(false); onStartTour(); }}>
+                <Sparkles size={14} /> Show me how this works
+              </button>
+              <button className="mu-btn mu-btn-ghost" style={{ width: "100%", justifyContent: "flex-start", borderRadius: 0, padding: "10px 14px", color: "#C0392B", borderTop: "1px solid #F0F0F0" }} onClick={() => { setMenuOpen(false); onSignOut(); }}>
+                <LogOut size={14} /> Log out
+              </button>
             </div>
           )}
         </div>
@@ -1577,7 +1652,7 @@ function FilterSelect({ label, value, options, onChange }) {
 
 function CandidateCard({ c, onOpen, extraAction }) {
   return (
-    <div className="mu-card" onClick={onOpen} style={{ padding: 16, cursor: "pointer", display: "flex", gap: 16, alignItems: "flex-start", flexWrap: "wrap" }}>
+    <div className="mu-card mu-card-clickable" onClick={onOpen} style={{ padding: 16, display: "flex", gap: 16, alignItems: "flex-start", flexWrap: "wrap" }}>
       <div style={{ flex: "2 1 220px", minWidth: 200 }}>
         <div style={{ fontWeight: 700, fontSize: 15 }}>{c.name}</div>
         <div style={{ fontSize: 12, color: "#A3A3A3", marginTop: 2 }}>{c.appNo} · {c.course}</div>
@@ -1650,6 +1725,18 @@ function CandidateProfile({ candidate: c, evaluator, onNext, onPrev, hasNext, ha
   const canSeeInterview = evaluator.stage === 2;
   const summary = buildSummary(c, { includeInterview: canSeeInterview });
 
+  // Pratham (stage 2) can always VIEW a candidate, but cannot evaluate one Shivas
+  // hasn't reviewed yet — and never a candidate Shivas already rejected.
+  const isStage2 = evaluator.stage === 2;
+  const shivasNotReviewed = isStage2 && !c.shivasDone;
+  const shivasRejectedBlock = isStage2 && c.shivasDone && c.shivasRejected;
+  const blockReason = shivasNotReviewed
+    ? "Shivas has not yet reviewed this profile. Hence, you will not be able to proceed with this profile."
+    : shivasRejectedBlock
+    ? "This candidate was rejected by Shivas at Stage 1 and is not eligible for a Stage 2 evaluation."
+    : null;
+  const canEvaluate = !blockReason;
+
   const tabs = [
     { id: "overview", label: "Overview" },
     { id: "academic", label: "Academic" },
@@ -1686,6 +1773,34 @@ function CandidateProfile({ candidate: c, evaluator, onNext, onPrev, hasNext, ha
         <div className="mu-section-title"><Sparkles size={13} /> Executive Summary</div>
         {summary.length ? summary.map((l, i) => <div key={i} style={{ fontSize: 13.5, marginBottom: 4, color: "#262626" }}>{l}</div>) : <div style={{ color: "#A3A3A3", fontSize: 13 }}>Insufficient data for a summary.</div>}
       </div>
+
+      {isStage2 && (
+        <div className="mu-card" style={{ padding: 16, marginBottom: 14, borderLeft: `3px solid ${c.shivasDone ? (c.shivasRejected ? "#C0392B" : "#39B6D8") : "#D4D4D4"}` }}>
+          <div className="mu-section-title" style={{ marginBottom: c.shivasDone ? 10 : 4 }}>
+            <History size={13} /> Shivas's Evaluation (Stage 1)
+          </div>
+          {c.shivasDone ? (
+            <>
+              <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: c.ev.shivas.comments ? 8 : 0 }}>
+                <CategoryBadge category={c.ev.shivas.category} />
+                {c.ev.shivas.ts && <span style={{ fontSize: 11.5, color: "#A3A3A3" }}>{new Date(c.ev.shivas.ts).toLocaleString()}</span>}
+              </div>
+              {c.ev.shivas.comments && <div style={{ fontSize: 13.5, color: "#262626", lineHeight: 1.55 }}>{c.ev.shivas.comments}</div>}
+            </>
+          ) : (
+            <div style={{ color: "#A3A3A3", fontSize: 13 }}>Shivas has not evaluated this candidate yet.</div>
+          )}
+        </div>
+      )}
+
+      {blockReason && (
+        <div className="mu-card" style={{ padding: 16, marginBottom: 14, background: "#FEF6E4", border: "1px solid #F5E0AE" }}>
+          <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+            <AlertTriangle size={16} color="#B7791F" style={{ flexShrink: 0, marginTop: 1 }} />
+            <div style={{ fontSize: 13.5, color: "#7A5A15", lineHeight: 1.5 }}>{blockReason}</div>
+          </div>
+        </div>
+      )}
 
       <div className="mu-tabbar mu-scrollbar" style={{ marginBottom: 14 }}>
         {tabs.map((t) => (
@@ -1827,8 +1942,8 @@ function CandidateProfile({ candidate: c, evaluator, onNext, onPrev, hasNext, ha
             <SkipForward size={14} /> <span className="mu-hide-xs">{isSkipped ? "Skipped" : "Skip"}</span>
           </button>
         )}
-        <button data-tour="give-feedback-btn" className="mu-btn mu-btn-secondary" onClick={() => onEvaluate(null)} style={{ flex: "2 1 auto", maxWidth: 320, padding: "9px 10px" }}>Give Feedback</button>
-        <button className="mu-btn mu-btn-primary" onClick={() => onEvaluate("Rejected")} style={{ flex: "1 1 auto", maxWidth: 160, background: "#C0392B", padding: "9px 10px" }}>Reject</button>
+        <button data-tour="give-feedback-btn" className="mu-btn mu-btn-secondary" onClick={() => onEvaluate(null)} disabled={!canEvaluate} title={blockReason || undefined} style={{ flex: "2 1 auto", maxWidth: 320, padding: "9px 10px" }}>Give Feedback</button>
+        <button className="mu-btn mu-btn-primary" onClick={() => onEvaluate("Rejected")} disabled={!canEvaluate} title={blockReason || undefined} style={{ flex: "1 1 auto", maxWidth: 160, background: "#C0392B", padding: "9px 10px" }}>Reject</button>
         <button className="mu-btn mu-btn-secondary mu-hide-desktop" onClick={onNext} disabled={!hasNext} style={{ flex: "0 0 auto", padding: "9px 10px" }}><ChevronRight size={14} /></button>
       </div>
     </div>
@@ -1979,11 +2094,12 @@ function EvaluationModal({ candidate, evaluator, preselect, onClose, onSave }) {
 }
 
 /* ============================== QUICK EVALUATE (SWIPE) ============================== */
-function QuickEvaluate({ list, evaluator, onEvaluate, onSkip }) {
+function QuickEvaluate({ list, evaluator, onSaveEvaluation, onSkip }) {
   const [stackIdx, setStackIdx] = useState(0);
   const [drag, setDrag] = useState({ x: 0, y: 0, active: false });
   const [flags, setFlags] = useState({});
   const [entering, setEntering] = useState(true);
+  const [pendingModal, setPendingModal] = useState(null); // { preselect } — non-null while a decision modal is open
   const startRef = useRef({ x: 0, y: 0 });
   const cardRef = useRef(null);
 
@@ -1997,19 +2113,42 @@ function QuickEvaluate({ list, evaluator, onEvaluate, onSkip }) {
   const advanceCard = () => setStackIdx((i) => i + 1);
   const toggleFlag = (appNo) => setFlags((f) => ({ ...f, [appNo]: !f[appNo] }));
 
-  const handleDecision = (direction) => {
-    // direction: 'right' = Selected, 'left' = Rejected
+  // Swiping (or tapping Rejected/Selected) only STAGES a decision — it flies the card
+  // out and opens the evaluation modal, but does NOT advance the queue yet. The card
+  // is only actually consumed once the modal is saved. Cancelling snaps it right back.
+  const beginDecision = (direction) => {
     const targetX = direction === "right" ? 520 : -520;
     setDrag({ x: targetX, y: drag.y, active: false });
-    setTimeout(() => {
-      if (direction === "right") onEvaluate(current.appNo, evaluator.id, null);
-      else onEvaluate(current.appNo, evaluator.id, "Rejected");
-      advanceCard();
-      setDrag({ x: 0, y: 0, active: false });
-    }, 220);
+    setPendingModal({ preselect: direction === "left" ? "Rejected" : null });
   };
 
+  const cancelDecision = () => {
+    setPendingModal(null);
+    setDrag({ x: 0, y: 0, active: false }); // snap the card back — no decision recorded, nothing removed
+  };
+
+  const confirmDecision = async (category, comments, scholarship) => {
+    await onSaveEvaluation(current.appNo, evaluator.id, category, comments, scholarship);
+    setPendingModal(null);
+    advanceCard();
+    setDrag({ x: 0, y: 0, active: false });
+  };
+
+  // Escape is the ONLY implicit way to skip. If a decision modal is open, Escape cancels
+  // it (same as clicking outside) — it does not also skip. If idle on a card, Escape skips it.
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.key !== "Escape") return;
+      if (pendingModal) cancelDecision();
+      else if (current) onSkip && onSkip(current.appNo);
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingModal, current?.appNo]);
+
   const onPointerDown = (e) => {
+    if (pendingModal) return;
     startRef.current = { x: e.clientX ?? e.touches?.[0]?.clientX ?? 0, y: e.clientY ?? e.touches?.[0]?.clientY ?? 0 };
     setDrag({ x: 0, y: 0, active: true });
   };
@@ -2022,8 +2161,8 @@ function QuickEvaluate({ list, evaluator, onEvaluate, onSkip }) {
   const onPointerUp = () => {
     if (!drag.active) return;
     const threshold = 110;
-    if (drag.x > threshold) handleDecision("right");
-    else if (drag.x < -threshold) handleDecision("left");
+    if (drag.x > threshold) beginDecision("right");
+    else if (drag.x < -threshold) beginDecision("left");
     else setDrag({ x: 0, y: 0, active: false });
   };
 
@@ -2120,15 +2259,25 @@ function QuickEvaluate({ list, evaluator, onEvaluate, onSkip }) {
 
       <div className="mu-qe-actions">
         <QuickActionButton color="#C0392B" bg="#FDECEC" label="Rejected" icon={ThumbsDown}
-          onClick={() => handleDecision("left")} />
+          onClick={() => beginDecision("left")} />
         <QuickActionButton color="#525252" bg="#F0F0F0" label="Skip" icon={SkipForward} muted
           onClick={() => onSkip && onSkip(current.appNo)} />
         <QuickActionButton color="#1E8E3E" bg="#EAF7EC" label="Selected" icon={ThumbsUp}
-          onClick={() => handleDecision("right")} />
+          onClick={() => beginDecision("right")} />
       </div>
       <div className="mu-qe-hint">
-        <Hand size={13} /> Swipe left, right or use buttons to evaluate
+        <Hand size={13} /> Swipe left, right or use buttons · Esc to skip
       </div>
+
+      {pendingModal && (
+        <EvaluationModal
+          candidate={current}
+          evaluator={evaluator}
+          preselect={pendingModal.preselect}
+          onClose={cancelDecision}
+          onSave={confirmDecision}
+        />
+      )}
     </div>
   );
 }
